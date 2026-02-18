@@ -16,11 +16,11 @@ Get the project scaffolded and running locally.
 - [x] Create Supabase project (database, auth, storage)
 - [x] Run database migrations (all tables from ARCHITECTURE.md)
 - [x] Enable pg_trgm extension for fuzzy matching
-- [ ] Create Supabase Storage bucket for build photos
+- [x] Create Supabase Storage bucket for build photos
 - [x] Set up environment variables (.env.local)
 - [x] Create root layout with sidebar navigation (matching MVP design)
 - [x] Set up GitHub repo
-- [ ] Connect to Vercel for auto-deploy
+- [x] Connect to Vercel for auto-deploy
 - [ ] Verify modhub.app DNS points to Vercel
 - [ ] Confirm site loads at modhub.app with basic layout
 

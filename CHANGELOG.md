@@ -34,4 +34,7 @@ Each entry: Date, what was built, files changed, notes.
 ✅ Site runs locally at http://localhost:3000
 ✅ Supabase connected and verified
 ✅ All database tables created
+✅ Supabase Storage bucket `build-photos` created
 ✅ Pushed to GitHub
+✅ Deployed to Vercel — https://modhub-git-main-max-karpantys-projects.vercel.app
+⏳ modhub.app DNS — pending (GoDaddy → Vercel, to be done later)
