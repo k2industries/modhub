@@ -10,16 +10,16 @@ Estimated effort: ~5 hours/week, targeting launch in 4-6 weeks.
 ## Phase 0: Project Setup (Week 1, Session 1)
 Get the project scaffolded and running locally.
 
-- [ ] Initialize Next.js 14 project with App Router
-- [ ] Install dependencies: Tailwind CSS, Supabase client, etc.
-- [ ] Set up Tailwind config with Mod Hub color scheme (red/dark theme from MVP)
-- [ ] Create Supabase project (database, auth, storage)
-- [ ] Run database migrations (all tables from ARCHITECTURE.md)
-- [ ] Enable pg_trgm extension for fuzzy matching
+- [x] Initialize Next.js 14 project with App Router
+- [x] Install dependencies: Tailwind CSS, Supabase client, etc.
+- [x] Set up Tailwind config with Mod Hub color scheme (red/dark theme from MVP)
+- [x] Create Supabase project (database, auth, storage)
+- [x] Run database migrations (all tables from ARCHITECTURE.md)
+- [x] Enable pg_trgm extension for fuzzy matching
 - [ ] Create Supabase Storage bucket for build photos
-- [ ] Set up environment variables (.env.local)
-- [ ] Create root layout with sidebar navigation (matching MVP design)
-- [ ] Set up GitHub repo
+- [x] Set up environment variables (.env.local)
+- [x] Create root layout with sidebar navigation (matching MVP design)
+- [x] Set up GitHub repo
 - [ ] Connect to Vercel for auto-deploy
 - [ ] Verify modhub.app DNS points to Vercel
 - [ ] Confirm site loads at modhub.app with basic layout
