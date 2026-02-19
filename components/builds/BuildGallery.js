@@ -28,6 +28,11 @@ export default function BuildGallery({ photos }) {
           sizes="(max-width: 1024px) 100vw, 66vw"
           priority
         />
+        {photos.length > 1 && (
+          <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded font-medium">
+            {activeIndex + 1} / {photos.length}
+          </div>
+        )}
       </div>
 
       {/* Thumbnails */}

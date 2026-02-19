@@ -1,7 +1,7 @@
 import ModCard from './ModCard'
 import { CATEGORY_COLORS } from '@/lib/constants/categories'
 
-export default function ModList({ mods }) {
+export default function ModList({ mods, isOwner, buildSlug }) {
   if (!mods || mods.length === 0) {
     return (
       <div className="py-10 text-center text-gray-300 text-sm">

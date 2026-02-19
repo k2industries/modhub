@@ -5,6 +5,42 @@ Each entry: Date, what was built, files changed, notes.
 
 ---
 
+## 2026-02-19 — Pre-Phase-1C: UI/UX Polish
+
+### What was built
+- **DB migration** (`005_discount_codes.sql`) — adds `discount_code TEXT` + `discount_pct INTEGER` to mods table
+- **Sidebar redesign** — inline SVG icons on all nav items, user avatar + username moved to top when logged in, new nav items: Search Cars (→/explore), Saved (→/saved), Settings (→/settings)
+- **Homepage dark hero** — full-bleed charcoal gradient, centered search bar (links to /explore?q=...) with `SearchBar` client component, CTAs kept
+- **BuildGallery counter** — "{n} / {total}" overlay at bottom-right of main photo
+- **ModCard** — entire card clickable via stretched-link pattern (`before:absolute before:inset-0`), discount code badge (green), Shop `<a>` uses `z-10` to float above card link
+- **ModList** — accepts `isOwner` + `buildSlug` props (passed through to ModCard)
+- **Build detail page** — fetches current user SSR, computes `isOwner`, shows Edit Build + Share buttons for owners, Share button is a `ShareButton` client component (copies URL to clipboard)
+- **Mod detail page** (`/mods/[id]`) — new SSR page with breadcrumb, hero (product image + info), Shop button, Creator's Take, Enthusiast Consensus (ConsensusScore), Evidence Used (expandable), YouTube placeholder grid
+- **ConsensusScore** (`components/mods/ConsensusScore.js`) — stars, confidence badge, pros/cons, empty state
+- **ShopButton** (`components/mods/ShopButton.js`) — full-width red button
+- **ShareButton** (`components/builds/ShareButton.js`) — copies build URL to clipboard
+- **Multi-step BuildForm wizard** — 4-step stepper (Car → Photos → Mods → Publish), step indicator with colored circles, Next/Back navigation, publish summary on step 4
+- **ModForm** — discount code + discount % fields added
+
+### Files changed
+- Created: `supabase/migrations/005_discount_codes.sql`
+- Created: `app/mods/[id]/page.js`
+- Created: `components/mods/ConsensusScore.js`
+- Created: `components/mods/ShopButton.js`
+- Created: `components/builds/ShareButton.js`
+- Created: `components/search/SearchBar.js`
+- Modified: `components/layout/Sidebar.js`
+- Modified: `app/page.js`
+- Modified: `app/builds/[slug]/page.js`
+- Modified: `components/builds/BuildGallery.js`
+- Modified: `components/builds/ModCard.js`
+- Modified: `components/builds/ModList.js`
+- Modified: `lib/queries/mods.js`
+- Modified: `components/forms/BuildForm.js`
+- Modified: `components/forms/ModForm.js`
+
+---
+
 ## 2026-02-19 — Phase 1A: Build Pages
 
 ### What was built

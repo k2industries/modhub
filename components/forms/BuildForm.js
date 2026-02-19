@@ -8,10 +8,59 @@ import { generateBuildSlug } from '@/lib/utils/slugify'
 import { CATEGORY_COLORS } from '@/lib/constants/categories'
 import ModForm from './ModForm'
 
+const STEPS = [
+  { number: 1, label: 'Car' },
+  { number: 2, label: 'Photos' },
+  { number: 3, label: 'Mods' },
+  { number: 4, label: 'Publish' },
+]
+
+function StepIndicator({ currentStep, buildId }) {
+  return (
+    <div className="flex items-center mb-8">
+      {STEPS.map((step, i) => {
+        const isActive = step.number === currentStep
+        const isComplete = step.number < currentStep
+        const isLocked = step.number > 1 && !buildId
+
+        return (
+          <div key={step.number} className="flex items-center flex-1 last:flex-none">
+            <div className="flex flex-col items-center gap-1">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                isActive   ? 'bg-brand-red text-white' :
+                isComplete ? 'bg-green-500 text-white' :
+                isLocked   ? 'bg-gray-100 text-gray-300' :
+                             'bg-gray-100 text-gray-500'
+              }`}>
+                {isComplete ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : step.number}
+              </div>
+              <span className={`text-xs font-medium ${isActive ? 'text-brand-red' : isLocked ? 'text-gray-300' : 'text-gray-500'}`}>
+                {step.label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`flex-1 h-px mx-2 mb-5 ${isComplete ? 'bg-green-300' : 'bg-gray-200'}`} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function BuildForm({ build, userId, username }) {
   const router = useRouter()
   const fileInputRef = useRef(null)
   const isEdit = !!build?.id
+
+  // Step state
+  const [currentStep, setCurrentStep] = useState(isEdit ? 1 : 1)
+  const [savedBuildId, setSavedBuildId] = useState(build?.id || null)
+  const [savedBuildSlug, setSavedBuildSlug] = useState(build?.slug || null)
 
   // Build fields
   const [year, setYear] = useState(build?.year || '')
@@ -44,12 +93,14 @@ export default function BuildForm({ build, userId, username }) {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
+  const hasBuild = !!savedBuildId
+
   // ── Save build ─────────────────────────────────────────────────────────────
 
   async function saveBuild(publish = false) {
     if (!year || !make || !model) {
       setError('Year, Make, and Model are required.')
-      return
+      return null
     }
     setSaving(true)
     setError('')
@@ -61,7 +112,7 @@ export default function BuildForm({ build, userId, username }) {
       specs.filter(([k, v]) => k.trim() && v.trim())
     )
 
-    if (isEdit) {
+    if (hasBuild) {
       const { error: err } = await supabase
         .from('builds')
         .update({
@@ -69,16 +120,18 @@ export default function BuildForm({ build, userId, username }) {
           title, description, specs: specsObj,
           status: newStatus, updated_at: new Date().toISOString(),
         })
-        .eq('id', build.id)
+        .eq('id', savedBuildId)
 
-      if (err) { setError(err.message); setSaving(false); return }
+      if (err) { setError(err.message); setSaving(false); return null }
       setStatus(newStatus)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
 
       if (publish && newStatus === 'published') {
-        router.push(`/builds/${build.slug}`)
+        router.push(`/builds/${savedBuildSlug}`)
       }
+      setSaving(false)
+      return savedBuildId
     } else {
       // Generate unique slug
       let slug = generateBuildSlug(year, make, model, chassis, username)
@@ -98,17 +151,27 @@ export default function BuildForm({ build, userId, username }) {
         .select()
         .single()
 
-      if (err) { setError(err.message); setSaving(false); return }
-      router.push(`/create?id=${newBuild.id}`)
+      if (err) { setError(err.message); setSaving(false); return null }
+      setSavedBuildId(newBuild.id)
+      setSavedBuildSlug(newBuild.slug)
+      setSaving(false)
+      return newBuild.id
     }
+  }
 
-    setSaving(false)
+  async function handleStep1Next() {
+    const id = await saveBuild(false)
+    if (id) {
+      // Update URL so page reload lands on edit mode, without full navigation
+      window.history.replaceState(null, '', `/create?id=${savedBuildId || id}`)
+      setCurrentStep(2)
+    }
   }
 
   // ── Photos ─────────────────────────────────────────────────────────────────
 
   async function handleFileSelect(files) {
-    if (!isEdit || uploading) return
+    if (!hasBuild || uploading) return
     setUploading(true)
     const supabase = createClient()
 
@@ -117,7 +180,7 @@ export default function BuildForm({ build, userId, username }) {
       if (file.size > 10 * 1024 * 1024) continue // 10MB max
 
       const ext = file.name.split('.').pop()
-      const path = `${build.id}/${Date.now()}.${ext}`
+      const path = `${savedBuildId}/${Date.now()}.${ext}`
 
       const { error: uploadErr } = await supabase.storage
         .from('build-photos')
@@ -132,7 +195,7 @@ export default function BuildForm({ build, userId, username }) {
       const isPrimary = photos.length === 0
       const { data: photo } = await supabase
         .from('build_photos')
-        .insert({ build_id: build.id, url: publicUrl, position: photos.length, is_primary: isPrimary })
+        .insert({ build_id: savedBuildId, url: publicUrl, position: photos.length, is_primary: isPrimary })
         .select()
         .single()
 
@@ -144,7 +207,7 @@ export default function BuildForm({ build, userId, username }) {
 
   async function setPrimaryPhoto(photoId) {
     const supabase = createClient()
-    await supabase.from('build_photos').update({ is_primary: false }).eq('build_id', build.id)
+    await supabase.from('build_photos').update({ is_primary: false }).eq('build_id', savedBuildId)
     await supabase.from('build_photos').update({ is_primary: true }).eq('id', photoId)
     setPhotos(prev => prev.map(p => ({ ...p, is_primary: p.id === photoId })))
   }
@@ -162,7 +225,7 @@ export default function BuildForm({ build, userId, username }) {
     await supabase.from('mods').delete().eq('id', modId)
     const updated = mods.filter(m => m.id !== modId)
     setMods(updated)
-    await supabase.from('builds').update({ mod_count: updated.length }).eq('id', build.id)
+    await supabase.from('builds').update({ mod_count: updated.length }).eq('id', savedBuildId)
   }
 
   function handleModSaved(savedMod) {
@@ -172,7 +235,7 @@ export default function BuildForm({ build, userId, username }) {
       const updated = [...mods, savedMod]
       setMods(updated)
       const supabase = createClient()
-      supabase.from('builds').update({ mod_count: updated.length }).eq('id', build.id)
+      supabase.from('builds').update({ mod_count: updated.length }).eq('id', savedBuildId)
     }
     setShowModForm(false)
     setEditingMod(null)
@@ -186,7 +249,6 @@ export default function BuildForm({ build, userId, username }) {
   function addSpec() { setSpecs(prev => [...prev, ['', '']]) }
   function removeSpec(i) { setSpecs(prev => prev.filter((_, idx) => idx !== i)) }
 
-  // Group mods by category for display
   const modsByCategory = mods.reduce((acc, mod) => {
     if (!acc[mod.category]) acc[mod.category] = []
     acc[mod.category].push(mod)
@@ -196,258 +258,336 @@ export default function BuildForm({ build, userId, username }) {
   const inputClass = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-red focus:border-transparent'
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
+      <StepIndicator currentStep={currentStep} buildId={savedBuildId} />
 
-      {/* ── Car Info ── */}
-      <section className="border border-gray-100 rounded-xl p-6">
-        <h2 className="text-sm font-semibold text-gray-900 mb-4">Car</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Year *</label>
-            <input
-              type="number"
-              value={year}
-              onChange={e => setYear(e.target.value)}
-              placeholder="2023"
-              min="1900"
-              max="2030"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Make *</label>
-            <input
-              value={make}
-              onChange={e => setMake(e.target.value)}
-              placeholder="BMW"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Model *</label>
-            <input
-              value={model}
-              onChange={e => setModel(e.target.value)}
-              placeholder="M3"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Chassis Code</label>
-            <input
-              value={chassis}
-              onChange={e => setChassis(e.target.value)}
-              placeholder="G80"
-              className={inputClass}
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Description</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Tell the story of your build…"
-              rows={4}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Specs ── */}
-      <section className="border border-gray-100 rounded-xl p-6">
-        <h2 className="text-sm font-semibold text-gray-900 mb-4">Specs</h2>
-        <div className="flex flex-col gap-2 mb-3">
-          {specs.map(([key, value], i) => (
-            <div key={i} className="flex gap-2 items-center">
-              <input
-                value={key}
-                onChange={e => updateSpec(i, e.target.value, value)}
-                placeholder="Engine"
-                className={`${inputClass} flex-1`}
-              />
-              <input
-                value={value}
-                onChange={e => updateSpec(i, key, e.target.value)}
-                placeholder="S58 3.0L Twin-Turbo"
-                className={`${inputClass} flex-[2]`}
-              />
-              <button
-                onClick={() => removeSpec(i)}
-                className="text-gray-300 hover:text-red-400 text-lg leading-none px-1"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={addSpec}
-          className="text-sm text-brand-red hover:text-brand-red-dark font-medium"
-        >
-          + Add spec
-        </button>
-      </section>
-
-      {/* ── Photos (edit mode only) ── */}
-      {isEdit && (
-        <section className="border border-gray-100 rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">
-            Photos ({photos.length}/10)
-          </h2>
-
-          {photos.length > 0 && (
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {photos.map(photo => (
-                <div key={photo.id} className="relative group aspect-video rounded-lg overflow-hidden bg-gray-100">
-                  <Image src={photo.url} alt="Build photo" fill className="object-cover" sizes="200px" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    {!photo.is_primary && (
-                      <button
-                        onClick={() => setPrimaryPhoto(photo.id)}
-                        className="text-xs bg-white text-gray-900 px-2 py-1 rounded font-medium"
-                      >
-                        Set Primary
-                      </button>
-                    )}
-                    <button
-                      onClick={() => deletePhoto(photo.id)}
-                      className="text-xs bg-red-500 text-white px-2 py-1 rounded font-medium"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  {photo.is_primary && (
-                    <div className="absolute top-1 left-1 text-xs bg-brand-red text-white px-1.5 py-0.5 rounded font-medium">
-                      Primary
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {photos.length < 10 && (
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={e => e.preventDefault()}
-              onDrop={e => { e.preventDefault(); handleFileSelect(e.dataTransfer.files) }}
-              className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center cursor-pointer hover:border-brand-red hover:bg-brand-red-light transition-colors"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                className="hidden"
-                onChange={e => handleFileSelect(e.target.files)}
-              />
-              <p className="text-sm text-gray-400">
-                {uploading ? 'Uploading…' : 'Drag & drop photos here, or click to select'}
-              </p>
-              <p className="text-xs text-gray-300 mt-1">Max 10MB per photo · JPG, PNG, WebP</p>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── Mods (edit mode only) ── */}
-      {isEdit && (
-        <section className="border border-gray-100 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-900">
-              Mods ({mods.length})
-            </h2>
-            {!showModForm && (
-              <button
-                onClick={() => { setEditingMod(null); setShowModForm(true) }}
-                className="text-sm font-semibold text-brand-red hover:text-brand-red-dark"
-              >
-                + Add Mod
-              </button>
-            )}
-          </div>
-
-          {/* Mod form */}
-          {showModForm && (
-            <div className="mb-6">
-              <ModForm
-                buildId={build.id}
-                mod={editingMod}
-                modCount={mods.length}
-                onSave={handleModSaved}
-                onCancel={() => { setShowModForm(false); setEditingMod(null) }}
-              />
-            </div>
-          )}
-
-          {/* Mods list */}
-          {mods.length === 0 && !showModForm ? (
-            <p className="text-sm text-gray-300 py-4 text-center">
-              No mods yet. Click &ldquo;+ Add Mod&rdquo; to get started.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {Object.entries(modsByCategory).map(([cat, catMods]) => (
-                <div key={cat}>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[cat] || 'bg-gray-100 text-gray-600'}`}>
-                    {cat}
-                  </span>
-                  <div className="mt-2 border border-gray-100 rounded-lg divide-y divide-gray-50">
-                    {catMods.map(mod => (
-                      <div key={mod.id} className="flex items-center gap-3 px-4 py-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{mod.name}</p>
-                          {mod.brand && <p className="text-xs text-gray-400">{mod.brand}</p>}
-                        </div>
-                        <button
-                          onClick={() => { setEditingMod(mod); setShowModForm(true) }}
-                          className="text-xs text-gray-400 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteMod(mod.id)}
-                          className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── Save bar ── */}
       {error && (
         <p className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-lg">{error}</p>
       )}
 
-      <div className="flex items-center gap-3 pb-8">
-        <button
-          onClick={() => saveBuild(false)}
-          disabled={saving}
-          className="px-5 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
-        >
-          {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Draft'}
-        </button>
-        <button
-          onClick={() => saveBuild(true)}
-          disabled={saving}
-          className="px-5 py-2.5 bg-brand-red text-white text-sm font-semibold rounded-lg hover:bg-brand-red-dark transition-colors disabled:opacity-60"
-        >
-          {status === 'published' ? 'Save & View' : 'Publish Build'}
-        </button>
-        {!isEdit && (
-          <p className="text-xs text-gray-400 ml-2">
-            Save as draft first, then add photos and mods.
-          </p>
-        )}
-      </div>
+      {/* ── Step 1: Car ── */}
+      {currentStep === 1 && (
+        <div className="flex flex-col gap-6">
+          <section className="border border-gray-100 rounded-xl p-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Car Details</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Year *</label>
+                <input
+                  type="number"
+                  value={year}
+                  onChange={e => setYear(e.target.value)}
+                  placeholder="2023"
+                  min="1900"
+                  max="2030"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Make *</label>
+                <input
+                  value={make}
+                  onChange={e => setMake(e.target.value)}
+                  placeholder="BMW"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Model *</label>
+                <input
+                  value={model}
+                  onChange={e => setModel(e.target.value)}
+                  placeholder="M3"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Chassis Code</label>
+                <input
+                  value={chassis}
+                  onChange={e => setChassis(e.target.value)}
+                  placeholder="G80"
+                  className={inputClass}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Description</label>
+                <textarea
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Tell the story of your build…"
+                  rows={4}
+                  className={`${inputClass} resize-none`}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="border border-gray-100 rounded-xl p-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Specs</h2>
+            <div className="flex flex-col gap-2 mb-3">
+              {specs.map(([key, value], i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    value={key}
+                    onChange={e => updateSpec(i, e.target.value, value)}
+                    placeholder="Engine"
+                    className={`${inputClass} flex-1`}
+                  />
+                  <input
+                    value={value}
+                    onChange={e => updateSpec(i, key, e.target.value)}
+                    placeholder="S58 3.0L Twin-Turbo"
+                    className={`${inputClass} flex-[2]`}
+                  />
+                  <button
+                    onClick={() => removeSpec(i)}
+                    className="text-gray-300 hover:text-red-400 text-lg leading-none px-1"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={addSpec}
+              className="text-sm text-brand-red hover:text-brand-red-dark font-medium"
+            >
+              + Add spec
+            </button>
+          </section>
+
+          <div className="flex items-center gap-3 pb-4">
+            <button
+              onClick={() => saveBuild(false)}
+              disabled={saving}
+              className="px-5 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
+            >
+              {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Draft'}
+            </button>
+            <button
+              onClick={handleStep1Next}
+              disabled={saving}
+              className="px-5 py-2.5 bg-brand-red text-white text-sm font-semibold rounded-lg hover:bg-brand-red-dark transition-colors disabled:opacity-60"
+            >
+              {saving ? 'Saving…' : 'Save & Continue →'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 2: Photos ── */}
+      {currentStep === 2 && (
+        <div className="flex flex-col gap-6">
+          <section className="border border-gray-100 rounded-xl p-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">
+              Photos ({photos.length}/10)
+            </h2>
+
+            {photos.length > 0 && (
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {photos.map(photo => (
+                  <div key={photo.id} className="relative group aspect-video rounded-lg overflow-hidden bg-gray-100">
+                    <Image src={photo.url} alt="Build photo" fill className="object-cover" sizes="200px" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      {!photo.is_primary && (
+                        <button
+                          onClick={() => setPrimaryPhoto(photo.id)}
+                          className="text-xs bg-white text-gray-900 px-2 py-1 rounded font-medium"
+                        >
+                          Set Primary
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deletePhoto(photo.id)}
+                        className="text-xs bg-red-500 text-white px-2 py-1 rounded font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {photo.is_primary && (
+                      <div className="absolute top-1 left-1 text-xs bg-brand-red text-white px-1.5 py-0.5 rounded font-medium">
+                        Primary
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {photos.length < 10 && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => { e.preventDefault(); handleFileSelect(e.dataTransfer.files) }}
+                className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center cursor-pointer hover:border-brand-red hover:bg-brand-red-light transition-colors"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => handleFileSelect(e.target.files)}
+                />
+                <p className="text-sm text-gray-400">
+                  {uploading ? 'Uploading…' : 'Drag & drop photos here, or click to select'}
+                </p>
+                <p className="text-xs text-gray-300 mt-1">Max 10MB per photo · JPG, PNG, WebP</p>
+              </div>
+            )}
+          </section>
+
+          <div className="flex items-center gap-3 pb-4">
+            <button onClick={() => setCurrentStep(1)} className="px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+              ← Back
+            </button>
+            <button onClick={() => setCurrentStep(3)} className="px-5 py-2.5 bg-brand-red text-white text-sm font-semibold rounded-lg hover:bg-brand-red-dark transition-colors">
+              Next →
+            </button>
+            <span className="text-xs text-gray-400">Photos are optional</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 3: Mods ── */}
+      {currentStep === 3 && (
+        <div className="flex flex-col gap-6">
+          <section className="border border-gray-100 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-900">
+                Mods ({mods.length})
+              </h2>
+              {!showModForm && (
+                <button
+                  onClick={() => { setEditingMod(null); setShowModForm(true) }}
+                  className="text-sm font-semibold text-brand-red hover:text-brand-red-dark"
+                >
+                  + Add Mod
+                </button>
+              )}
+            </div>
+
+            {showModForm && (
+              <div className="mb-6">
+                <ModForm
+                  buildId={savedBuildId}
+                  mod={editingMod}
+                  modCount={mods.length}
+                  onSave={handleModSaved}
+                  onCancel={() => { setShowModForm(false); setEditingMod(null) }}
+                />
+              </div>
+            )}
+
+            {mods.length === 0 && !showModForm ? (
+              <p className="text-sm text-gray-300 py-4 text-center">
+                No mods yet. Click &ldquo;+ Add Mod&rdquo; to get started.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {Object.entries(modsByCategory).map(([cat, catMods]) => (
+                  <div key={cat}>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[cat] || 'bg-gray-100 text-gray-600'}`}>
+                      {cat}
+                    </span>
+                    <div className="mt-2 border border-gray-100 rounded-lg divide-y divide-gray-50">
+                      {catMods.map(mod => (
+                        <div key={mod.id} className="flex items-center gap-3 px-4 py-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{mod.name}</p>
+                            {mod.brand && <p className="text-xs text-gray-400">{mod.brand}</p>}
+                          </div>
+                          <button
+                            onClick={() => { setEditingMod(mod); setShowModForm(true) }}
+                            className="text-xs text-gray-400 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteMod(mod.id)}
+                            className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <div className="flex items-center gap-3 pb-4">
+            <button onClick={() => setCurrentStep(2)} className="px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+              ← Back
+            </button>
+            <button onClick={() => setCurrentStep(4)} className="px-5 py-2.5 bg-brand-red text-white text-sm font-semibold rounded-lg hover:bg-brand-red-dark transition-colors">
+              Next →
+            </button>
+            <span className="text-xs text-gray-400">Mods are optional</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 4: Publish ── */}
+      {currentStep === 4 && (
+        <div className="flex flex-col gap-6">
+          <section className="border border-gray-100 rounded-xl p-6 bg-white">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Build Summary</h2>
+            <dl className="flex flex-col gap-3 text-sm">
+              <div className="flex justify-between gap-2">
+                <dt className="text-gray-400">Vehicle</dt>
+                <dd className="font-medium text-gray-900 text-right">
+                  {year} {make} {model}{chassis ? ` (${chassis})` : ''}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-gray-400">Photos</dt>
+                <dd className="font-medium text-gray-900">{photos.length}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-gray-400">Mods</dt>
+                <dd className="font-medium text-gray-900">{mods.length}</dd>
+              </div>
+              {description && (
+                <div className="pt-2 border-t border-gray-50">
+                  <dt className="text-gray-400 mb-1">Description</dt>
+                  <dd className="text-gray-700 leading-relaxed">{description}</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+
+          <div className="border border-yellow-100 bg-yellow-50 rounded-xl p-4">
+            <p className="text-sm text-yellow-800">
+              <strong>Ready to publish?</strong> Your build will be publicly visible and indexed by Google.
+              You can always come back to edit it.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 pb-8">
+            <button onClick={() => setCurrentStep(3)} className="px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+              ← Back
+            </button>
+            <button
+              onClick={() => saveBuild(false)}
+              disabled={saving}
+              className="px-5 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
+            >
+              {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Draft'}
+            </button>
+            <button
+              onClick={() => saveBuild(true)}
+              disabled={saving}
+              className="px-6 py-2.5 bg-brand-red text-white text-sm font-semibold rounded-lg hover:bg-brand-red-dark transition-colors disabled:opacity-60"
+            >
+              {saving ? 'Publishing…' : status === 'published' ? 'Save & View' : 'Publish Build'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

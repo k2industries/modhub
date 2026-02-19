@@ -10,6 +10,8 @@ export default function ModForm({ buildId, mod, modCount, onSave, onCancel }) {
   const [category, setCategory] = useState(mod?.category || MOD_CATEGORIES[0])
   const [url, setUrl] = useState(mod?.url || '')
   const [imageUrl, setImageUrl] = useState(mod?.image_url || '')
+  const [discountCode, setDiscountCode] = useState(mod?.discount_code || '')
+  const [discountPct, setDiscountPct] = useState(mod?.discount_pct || '')
   const [installStatus, setInstallStatus] = useState(mod?.install_status || 'installed')
   const [wouldInstallAgain, setWouldInstallAgain] = useState(mod?.would_install_again ?? null)
   const [notes, setNotes] = useState(mod?.install_notes || '')
@@ -28,6 +30,8 @@ export default function ModForm({ buildId, mod, modCount, onSave, onCancel }) {
       category,
       url: url.trim() || null,
       image_url: imageUrl.trim() || null,
+      discount_code: discountCode.trim() || null,
+      discount_pct: discountPct ? parseInt(discountPct) : null,
       install_status: installStatus,
       would_install_again: wouldInstallAgain,
       install_notes: notes.trim() || null,
@@ -117,6 +121,29 @@ export default function ModForm({ buildId, mod, modCount, onSave, onCancel }) {
             onChange={e => setImageUrl(e.target.value)}
             placeholder="https://..."
             type="url"
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Discount Code</label>
+          <input
+            value={discountCode}
+            onChange={e => setDiscountCode(e.target.value)}
+            placeholder="e.g. MKAARP"
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Discount %</label>
+          <input
+            value={discountPct}
+            onChange={e => setDiscountPct(e.target.value)}
+            placeholder="e.g. 5"
+            type="number"
+            min="0"
+            max="100"
             className={inputClass}
           />
         </div>

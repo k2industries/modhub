@@ -1,8 +1,10 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getBuildBySlug } from '@/lib/queries/builds'
 import BuildGallery from '@/components/builds/BuildGallery'
 import ModList from '@/components/builds/ModList'
+import ShareButton from '@/components/builds/ShareButton'
 
 export async function generateMetadata({ params }) {
   const supabase = createClient()
@@ -37,10 +39,14 @@ export async function generateMetadata({ params }) {
 
 export default async function BuildPage({ params }) {
   const supabase = createClient()
-  const build = await getBuildBySlug(supabase, params.slug)
+  const [build, { data: { user } }] = await Promise.all([
+    getBuildBySlug(supabase, params.slug),
+    supabase.auth.getUser(),
+  ])
 
   if (!build) notFound()
 
+  const isOwner = !!(user && user.id === build.user_id)
   const { profile, build_photos: photos, mods, specs } = build
   const primaryPhoto = photos?.find(p => p.is_primary) || photos?.[0]
   const specsEntries = specs ? Object.entries(specs).filter(([, v]) => v) : []
@@ -80,7 +86,20 @@ export default async function BuildPage({ params }) {
             )}
             <span className="text-xs text-gray-400">{build.mod_count || 0} mods</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">{build.title}</h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-2xl font-bold text-gray-900">{build.title}</h1>
+            {isOwner && (
+              <div className="flex items-center gap-2 flex-none">
+                <Link
+                  href={`/create?id=${build.id}`}
+                  className="px-3 py-1.5 text-sm font-semibold border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Edit Build
+                </Link>
+                <ShareButton url={`${process.env.NEXT_PUBLIC_SITE_URL}/builds/${build.slug}`} />
+              </div>
+            )}
+          </div>
           {build.description && (
             <p className="mt-2 text-gray-500 text-sm leading-relaxed max-w-2xl">
               {build.description}
@@ -97,7 +116,7 @@ export default async function BuildPage({ params }) {
               <h2 className="text-base font-semibold text-gray-900 mb-4">
                 Mods ({build.mod_count || 0})
               </h2>
-              <ModList mods={mods || []} />
+              <ModList mods={mods || []} isOwner={isOwner} buildSlug={build.slug} />
             </div>
           </div>
 
