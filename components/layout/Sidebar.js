@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -80,9 +81,9 @@ export default function Sidebar({ user, profile }) {
   return (
     <aside className="fixed left-0 top-0 h-screen w-56 bg-white border-r border-gray-100 flex flex-col z-10">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-brand-red font-bold text-xl tracking-tight">MOD HUB</span>
+      <div className="px-5 py-4 border-b border-gray-100">
+        <Link href="/">
+          <Image src="/images/Mod Logo Black copy.png" alt="Mod Hub" width={120} height={40} style={{ height: 'auto' }} priority />
         </Link>
       </div>
 
