@@ -1,31 +1,37 @@
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { getFeaturedBuilds } from '@/lib/queries/builds'
+import BuildCard from '@/components/builds/BuildCard'
 
 export const metadata = {
   title: 'Mod Hub — Real Car Builds, Real Mods',
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = createClient()
+  const featured = await getFeaturedBuilds(supabase, 6)
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       {/* Hero */}
-      <section className="px-8 py-20 max-w-3xl">
+      <section className="px-8 pt-16 pb-12 max-w-3xl">
         <h1 className="text-4xl font-bold text-gray-900 leading-tight mb-4">
           Real builds from real enthusiasts.
         </h1>
-        <p className="text-lg text-gray-500 mb-8">
-          See exactly what mods owners installed on their car, read their honest take,
+        <p className="text-lg text-gray-400 mb-8 leading-relaxed">
+          See exactly what mods owners installed, read their honest take,
           and shop the part — all in one place.
         </p>
         <div className="flex gap-3">
           <Link
             href="/explore"
-            className="px-5 py-3 bg-brand-red text-white font-medium rounded-md hover:bg-brand-red-dark transition-colors"
+            className="px-5 py-3 bg-brand-red text-white font-semibold rounded-lg hover:bg-brand-red-dark transition-colors"
           >
             Browse Builds
           </Link>
           <Link
             href="/auth/signup"
-            className="px-5 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition-colors"
+            className="px-5 py-3 border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
           >
             Share Your Build
           </Link>
@@ -33,23 +39,40 @@ export default function HomePage() {
       </section>
 
       {/* Value props */}
-      <section className="px-8 pb-16 grid grid-cols-3 gap-8 max-w-3xl">
+      <section className="px-8 pb-14 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl">
         <div>
-          <div className="w-8 h-8 bg-brand-red-light rounded-md mb-3" />
-          <h3 className="font-semibold text-gray-900 mb-1">Real Builds</h3>
-          <p className="text-sm text-gray-500">Every mod documented by the owner who actually installed it.</p>
+          <div className="w-7 h-7 bg-brand-red-light rounded-md mb-3" />
+          <h3 className="font-semibold text-gray-900 mb-1 text-sm">Real Builds</h3>
+          <p className="text-sm text-gray-400">Every mod documented by the owner who actually installed it.</p>
         </div>
         <div>
-          <div className="w-8 h-8 bg-brand-red-light rounded-md mb-3" />
-          <h3 className="font-semibold text-gray-900 mb-1">Honest Reviews</h3>
-          <p className="text-sm text-gray-500">Would install again ratings from people who know firsthand.</p>
+          <div className="w-7 h-7 bg-brand-red-light rounded-md mb-3" />
+          <h3 className="font-semibold text-gray-900 mb-1 text-sm">Honest Reviews</h3>
+          <p className="text-sm text-gray-400">Would-install-again ratings from people who know firsthand.</p>
         </div>
         <div>
-          <div className="w-8 h-8 bg-brand-red-light rounded-md mb-3" />
-          <h3 className="font-semibold text-gray-900 mb-1">Shop With Confidence</h3>
-          <p className="text-sm text-gray-500">One click from a real build to the part on Mod Supply.</p>
+          <div className="w-7 h-7 bg-brand-red-light rounded-md mb-3" />
+          <h3 className="font-semibold text-gray-900 mb-1 text-sm">Shop With Confidence</h3>
+          <p className="text-sm text-gray-400">One click from a real build to the part on Mod Supply.</p>
         </div>
       </section>
+
+      {/* Featured builds */}
+      {featured.length > 0 && (
+        <section className="px-8 pb-16">
+          <div className="flex items-center justify-between mb-6 max-w-6xl">
+            <h2 className="text-lg font-bold text-gray-900">Latest Builds</h2>
+            <Link href="/explore" className="text-sm text-brand-red hover:text-brand-red-dark font-medium">
+              View all →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl">
+            {featured.map(build => (
+              <BuildCard key={build.id} build={build} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
