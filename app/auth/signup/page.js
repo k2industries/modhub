@@ -27,7 +27,7 @@ export default function SignupPage() {
       return
     }
 
-    router.push('/my-builds')
+    router.push('/?onboarding=true')
     router.refresh()
   }
 
