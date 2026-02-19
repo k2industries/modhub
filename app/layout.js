@@ -1,4 +1,5 @@
 import './globals.css'
+import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/layout/Sidebar'
 
 export const metadata = {
@@ -10,13 +11,26 @@ export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://modhub.app'),
 }
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let profile = null
+  if (user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username, display_name, avatar_url')
+      .eq('id', user.id)
+      .single()
+    profile = data
+  }
+
   return (
     <html lang="en">
       <body>
         <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="flex-1 ml-56">
+          <Sidebar user={user} profile={profile} />
+          <main className="flex-1 ml-56 min-w-0">
             {children}
           </main>
         </div>
