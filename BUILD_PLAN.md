@@ -32,30 +32,30 @@ Get the project scaffolded and running locally.
 The most important pages. This is the product.
 
 ### Build Detail Page (SSR — #1 Priority)
-- [ ] Create build detail page at /builds/[slug]
-- [ ] Server-side render all build data (title, YMM, chassis, photos, mods)
-- [ ] Photo gallery with thumbnails (matching MVP layout)
-- [ ] Mods list grouped by category (Engine & Performance, Exterior / Aero, etc.)
-- [ ] Each mod shows: name, brand, image, install status, "Shop" button
-- [ ] Specs tab (engine, horsepower, etc. from JSONB field)
-- [ ] Builder profile section (avatar, name, Instagram, website)
-- [ ] Share button
-- [ ] SEO: meta title, meta description, OG tags, JSON-LD schema
-- [ ] SEO: clean URL format /builds/[year]-[make]-[model]-[chassis]-[username]
-- [ ] Mobile responsive layout
+- [x] Create build detail page at /builds/[slug]
+- [x] Server-side render all build data (title, YMM, chassis, photos, mods)
+- [x] Photo gallery with thumbnails (matching MVP layout)
+- [x] Mods list grouped by category (Engine & Performance, Exterior / Aero, etc.)
+- [x] Each mod shows: name, brand, image, install status, "Shop" button
+- [x] Specs tab (engine, horsepower, etc. from JSONB field)
+- [x] Builder profile section (avatar, name, Instagram, website)
+- [x] Share button
+- [x] SEO: meta title, meta description, OG tags, JSON-LD schema
+- [x] SEO: clean URL format /builds/[year]-[make]-[model]-[chassis]-[username]
+- [x] Mobile responsive layout
 
 ### Explore Builds Page
-- [ ] Grid of BuildCards showing all published builds
-- [ ] Each card: primary photo, title (year make model), chassis code, mod count, builder name
-- [ ] Top Models filter chips (BMW E36, E46, F8X, Toyota GR86, Nissan 350Z, etc.)
-- [ ] Search bar (search by car, model, or builder)
-- [ ] Sort by: Newest, Most Mods, Most Viewed
-- [ ] Pagination or infinite scroll
+- [x] Grid of BuildCards showing all published builds
+- [x] Each card: primary photo, title (year make model), chassis code, mod count, builder name
+- [x] Top Models filter chips (BMW E36, E46, F8X, Toyota GR86, Nissan 350Z, etc.)
+- [x] Search bar (search by car, model, or builder)
+- [x] Sort by: Newest, Most Mods, Most Viewed
+- [x] Pagination or infinite scroll
 
 ### Homepage
-- [ ] Hero section with search bar and "Share Your Build" CTA
-- [ ] Value props: Browse Real Builds, See Enthusiast Consensus, Shop With Confidence
-- [ ] Featured builds grid (latest published)
+- [x] Hero section with search bar and "Share Your Build" CTA
+- [x] Value props: Browse Real Builds, See Enthusiast Consensus, Shop With Confidence
+- [x] Featured builds grid (latest published)
 
 **Done when:** You can visit modhub.app, browse builds, click into a build page, and see all mods with shop links. Google can crawl and index every build page.
 

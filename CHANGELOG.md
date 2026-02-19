@@ -5,6 +5,28 @@ Each entry: Date, what was built, files changed, notes.
 
 ---
 
+## 2026-02-19 — Phase 1A: Build Pages
+
+### What was built
+- **Build detail page** (`/builds/[slug]`) — SSR, photo gallery, mods grouped by category, specs sidebar, builder profile, share section, full SEO (meta, OG, JSON-LD schema)
+- **Explore page** (`/explore`) — build grid, chassis filter chips, search, sort (newest/most mods/most viewed), pagination
+- **Homepage** — updated with featured builds grid pulling live data from Supabase
+- **Components:** `BuildCard`, `BuildGallery` (client, clickable thumbnails), `ModCard` (with red Shop button), `ModList` (grouped by category)
+- **Query layer:** `lib/queries/builds.js`, `lib/queries/mods.js`
+- **Constants:** `lib/constants/categories.js` (9 categories + colors), `lib/constants/vehicles.js` (42 vehicles + explore filters)
+- **Utils:** `lib/utils/slugify.js`
+- **Trigger fix:** `002_fix_user_trigger.sql` — handles edge cases, never blocks signup
+- **Seed data:** `003_seed_test_build.sql` — BMW M3 G80 with 8 mods and 3 photos
+
+### Status
+✅ Build detail page live and verified at /builds/2023-bmw-m3-g80-max
+✅ Explore page with filters and pagination working
+✅ Homepage showing featured builds from database
+✅ All pages server-rendered (SSR) — Google can crawl every build page
+✅ Pushed to GitHub → auto-deployed to Vercel
+
+---
+
 ## 2026-02-17 — Phase 0: Project Setup
 
 ### What was built
